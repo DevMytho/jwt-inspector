@@ -51,6 +51,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Install core (required by @core alias)
+        run: cd core && npm install
+
       - name: Install GUI deps
         run: cd gui && npm install
 
@@ -88,6 +91,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: gui/src-tauri
+
+      - name: Install core
+        run: cd core && npm install
 
       - name: Install frontend deps
         run: cd gui && npm install
