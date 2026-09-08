@@ -121,6 +121,12 @@ jobs:
         if: runner.os == 'Linux' && contains(matrix.args, 'aarch64')
         run: |
           sudo dpkg --add-architecture arm64
+          # Standard Ubuntu mirrors don't serve arm64 packages; use ports.ubuntu.com
+          sudo sed -i 's|^deb http|deb [arch=amd64] http|' /etc/apt/sources.list
+          echo 'deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy main restricted universe multiverse' | sudo tee /etc/apt/sources.list.d/arm64-ports.list
+          echo 'deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-updates main restricted universe multiverse' | sudo tee -a /etc/apt/sources.list.d/arm64-ports.list
+          echo 'deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-backports main restricted universe multiverse' | sudo tee -a /etc/apt/sources.list.d/arm64-ports.list
+          echo 'deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-security main restricted universe multiverse' | sudo tee -a /etc/apt/sources.list.d/arm64-ports.list
           sudo apt-get update
           sudo apt-get install -y \
             libwebkit2gtk-4.1-dev:arm64 \
