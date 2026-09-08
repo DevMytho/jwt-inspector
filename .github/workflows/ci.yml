@@ -1,0 +1,101 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  cli:
+    name: CLI — typecheck & build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install core
+        run: cd core && npm install
+
+      - name: Install CLI
+        run: cd cli && npm install
+
+      - name: Typecheck
+        run: cd cli && npx tsc --noEmit
+
+      - name: Build
+        run: cd cli && npm run build
+
+      - name: Smoke test
+        run: |
+          TOKEN=$(node -e "
+            const crypto = require('crypto');
+            const b = (o) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/g,'');
+            const h = b({alg:'HS256',typ:'JWT'});
+            const p = b({sub:'test',exp:Math.floor(Date.now()/1000)+3600});
+            const s = crypto.createHmac('sha256','key').update(h+'.'+p).digest();
+            console.log(h+'.'+p+'.'+s.toString('base64').replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/g,''));
+          ")
+          npx tsx cli/src/cli.ts "$TOKEN"
+
+  gui:
+    name: GUI — typecheck & build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install GUI deps
+        run: cd gui && npm install
+
+      - name: Typecheck
+        run: cd gui && npx tsc --noEmit
+
+      - name: Vite build
+        run: cd gui && npx vite build
+
+  tauri:
+    name: Tauri — build
+    needs: [cli, gui]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ubuntu-22.04
+            args: ""
+          - platform: macos-latest
+            args: "--target aarch64-apple-darwin"
+          - platform: windows-latest
+            args: ""
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin' || '' }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: gui/src-tauri
+
+      - name: Install frontend deps
+        run: cd gui && npm install
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: gui
+          args: ${{ matrix.args }}

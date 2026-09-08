@@ -1,0 +1,15 @@
+{
+  "name": "@jwt-inspector/core",
+  "version": "0.1.0",
+  "description": "JWT decode, analyze, and verify — works in Node and browser",
+  "type": "module",
+  "main": "index.ts",
+  "types": "index.ts",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "dependencies": {
+    "jose": "^6.0.11"
+  },
+  "license": "MIT"
+}
